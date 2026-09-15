@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Site Parser — OLX</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Site Parser</h1>
+        <p>Первая ревизия: сбор объявлений с текущей открытой страницы OLX.kz</p>
+      </div>
+      <button id="scan">Сканировать OLX</button>
+    </header>
+
+    <section class="status">
+      <strong id="status">Открой страницу поиска OLX.kz, затем нажми «Сканировать OLX».</strong>
+      <span id="count"></span>
+    </section>
+
+    <section class="table-wrap">
+      <table>
+        <thead><tr><th>Название</th><th>Цена</th><th>Ссылка</th></tr></thead>
+        <tbody id="results"></tbody>
+      </table>
+    </section>
+  </main>
+  <script src="dashboard.js"></script>
+</body>
+</html>

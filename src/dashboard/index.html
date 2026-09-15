@@ -1,33 +1,21 @@
 <!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Site Parser — OLX</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <main>
-    <header>
-      <div>
-        <h1>Site Parser</h1>
-        <p>Первая ревизия: сбор объявлений с текущей открытой страницы OLX.kz</p>
-      </div>
-      <button id="scan">Сканировать OLX</button>
-    </header>
-
-    <section class="status">
-      <strong id="status">Открой страницу поиска OLX.kz, затем нажми «Сканировать OLX».</strong>
-      <span id="count"></span>
-    </section>
-
-    <section class="table-wrap">
-      <table>
-        <thead><tr><th>Название</th><th>Цена</th><th>Ссылка</th></tr></thead>
-        <tbody id="results"></tbody>
-      </table>
-    </section>
-  </main>
-  <script src="dashboard.js"></script>
-</body>
-</html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Site Parser — OLX</title><link rel="stylesheet" href="style.css"></head>
+<body><main>
+<header><div><h1>Site Parser <small>v0.2.0</small></h1><p>Собственный глубокий поиск по OLX.kz</p></div></header>
+<section class="panel">
+  <div class="grid">
+    <label class="wide">Что ищем<input id="query" value="3090" placeholder="например: 3090"></label>
+    <label>Цена от, ₸<input id="minPrice" type="number" min="0" placeholder="150000"></label>
+    <label>Цена до, ₸<input id="maxPrice" type="number" min="0" placeholder="500000"></label>
+    <label class="wide">Дополнительные слова <span>(необязательно, любое из)</span><input id="extra" placeholder="RTX, GeForce, NVIDIA"></label>
+    <label class="wide">Исключить слова <span>(через запятую)</span><input id="exclude" placeholder="куплю, ремонт, коробка"></label>
+    <label>Страниц OLX<input id="pages" type="number" min="1" max="50" value="10"></label>
+    <div class="checks"><label><input id="inTitle" type="checkbox" checked> Искать в названии</label><label><input id="inDescription" type="checkbox" checked> Искать в описании</label></div>
+  </div>
+  <p class="hint">Для проверки описания расширение открывает объявление в фоновой вкладке. Поиск идёт с текущего OLX URL и меняет только параметр page.</p>
+  <div class="actions"><button id="scan">Начать сканирование</button><button id="stop" class="secondary" disabled>Остановить</button></div>
+</section>
+<section class="status"><strong id="status">Открой любую страницу поиска OLX.kz и запусти сканирование.</strong><span id="count"></span></section>
+<section class="stats"><div><b id="pagesDone">0</b><span>страниц</span></div><div><b id="checked">0</b><span>карточек</span></div><div><b id="matched">0</b><span>подходит</span></div></section>
+<section class="table-wrap"><table><thead><tr><th>Название</th><th>Цена</th><th>Почему найдено</th><th>Ссылка</th></tr></thead><tbody id="results"></tbody></table></section>
+</main><script src="dashboard.js"></script></body></html>

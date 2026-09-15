@@ -1,56 +1,17 @@
-const scanButton = document.querySelector('#scan');
-const statusNode = document.querySelector('#status');
-const countNode = document.querySelector('#count');
-const resultsNode = document.querySelector('#results');
-
-function render(items) {
-  resultsNode.replaceChildren();
-  for (const item of items) {
-    const row = document.createElement('tr');
-
-    const title = document.createElement('td');
-    title.textContent = item.title;
-
-    const price = document.createElement('td');
-    price.textContent = item.price || '—';
-
-    const linkCell = document.createElement('td');
-    const link = document.createElement('a');
-    link.href = item.url;
-    link.target = '_blank';
-    link.rel = 'noreferrer';
-    link.textContent = 'Открыть';
-    linkCell.append(link);
-
-    row.append(title, price, linkCell);
-    resultsNode.append(row);
-  }
-}
-
-async function findOlxTab() {
-  const tabs = await chrome.tabs.query({});
-  return tabs.find((tab) => /^https:\/\/(www\.)?olx\.kz\//i.test(tab.url || ''));
-}
-
-scanButton.addEventListener('click', async () => {
-  scanButton.disabled = true;
-  statusNode.textContent = 'Сканирую открытую страницу OLX…';
-  countNode.textContent = '';
-
-  try {
-    const tab = await findOlxTab();
-    if (!tab?.id) throw new Error('Не найдена открытая вкладка OLX.kz. Сначала открой поиск OLX.');
-
-    const response = await chrome.tabs.sendMessage(tab.id, { type: 'SITE_PARSER_SCAN_PAGE' });
-    if (!response?.ok) throw new Error(response?.error || 'Парсер не вернул результат.');
-
-    render(response.items || []);
-    statusNode.textContent = `Страница: ${response.pageUrl}`;
-    countNode.textContent = `Найдено: ${(response.items || []).length}`;
-  } catch (error) {
-    statusNode.textContent = error?.message || String(error);
-    resultsNode.replaceChildren();
-  } finally {
-    scanButton.disabled = false;
-  }
-});
+const $=s=>document.querySelector(s);let stopped=false;
+const ui={scan:$('#scan'),stop:$('#stop'),status:$('#status'),count:$('#count'),results:$('#results'),pagesDone:$('#pagesDone'),checked:$('#checked'),matched:$('#matched')};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const norm=s=>(s||'').toLocaleLowerCase('ru').replace(/\s+/g,' ').trim();
+const words=id=>$(id).value.split(',').map(norm).filter(Boolean);
+const priceNumber=s=>{const n=Number((s||'').replace(/[^0-9]/g,''));return Number.isFinite(n)?n:0};
+function settings(){return{q:norm($('#query').value),min:+$('#minPrice').value||0,max:+$('#maxPrice').value||0,extra:words('#extra'),exclude:words('#exclude'),pages:Math.min(50,Math.max(1,+$('#pages').value||1)),inTitle:$('#inTitle').checked,inDescription:$('#inDescription').checked}}
+function titleCandidate(item,s){const t=norm(item.title);if(s.exclude.some(x=>t.includes(x)))return false;if(s.inTitle&&t.includes(s.q))return true;if(s.inDescription)return true;return false}
+function passes(item,description,s){const title=norm(item.title),desc=norm(description),combined=`${title} ${desc}`;if(s.exclude.some(x=>combined.includes(x)))return null;const p=priceNumber(item.price);if(s.min&&p&&p<s.min)return null;if(s.max&&p&&p>s.max)return null;const titleHit=s.inTitle&&title.includes(s.q),descHit=s.inDescription&&desc.includes(s.q);if(!titleHit&&!descHit)return null;if(s.extra.length&&!s.extra.some(x=>combined.includes(x)))return null;return titleHit?(descHit?'название + описание':'название'):'описание'}
+function render(item,why){const tr=document.createElement('tr');for(const text of[item.title,item.price||'—',why]){const td=document.createElement('td');td.textContent=text;tr.append(td)}const td=document.createElement('td'),a=document.createElement('a');a.href=item.url;a.target='_blank';a.textContent='Открыть';td.append(a);tr.append(td);ui.results.append(tr)}
+async function olxTab(){const tabs=await chrome.tabs.query({});return tabs.find(t=>/^https:\/\/(www\.)?olx\.kz\//i.test(t.url||''))}
+async function waitComplete(id,timeout=15000){const start=Date.now();while(Date.now()-start<timeout){if(stopped)throw new Error('Остановлено пользователем');const t=await chrome.tabs.get(id);if(t.status==='complete'){await sleep(700);return}await sleep(250)}throw new Error('OLX слишком долго загружает страницу')}
+async function message(id,msg){try{return await chrome.tabs.sendMessage(id,msg)}catch{await chrome.scripting.executeScript({target:{tabId:id},files:['src/parser/olx.js','src/content.js']});return chrome.tabs.sendMessage(id,msg)}}
+async function descriptionFor(url){const tab=await chrome.tabs.create({url,active:false});try{await waitComplete(tab.id);const r=await message(tab.id,{type:'SITE_PARSER_GET_DESCRIPTION'});return r?.description||''}finally{try{await chrome.tabs.remove(tab.id)}catch{}}}
+function pageUrl(base,n){const u=new URL(base);u.searchParams.set('page',String(n));return u.href}
+ui.stop.onclick=()=>{stopped=true;ui.status.textContent='Останавливаю…'};
+ui.scan.onclick=async()=>{const s=settings();if(!s.q)return ui.status.textContent='Введи, что искать.';if(!s.inTitle&&!s.inDescription)return ui.status.textContent='Выбери название и/или описание.';stopped=false;ui.scan.disabled=true;ui.stop.disabled=false;ui.results.replaceChildren();let checked=0,matched=0,pagesDone=0;try{const source=await olxTab();if(!source?.id)throw new Error('Открой вкладку с поисковой выдачей OLX.kz.');const base=source.url;for(let page=1;page<=s.pages&&!stopped;page++){ui.status.textContent=`Страница ${page} / ${s.pages}: загружаю OLX…`;await chrome.tabs.update(source.id,{url:pageUrl(base,page),active:false});await waitComplete(source.id);const r=await message(source.id,{type:'SITE_PARSER_SCAN_PAGE'});if(!r?.ok)throw new Error(r?.error||'Ошибка парсера');const items=r.items||[];if(!items.length)break;for(const item of items){if(stopped)break;checked++;ui.checked.textContent=checked;if(!titleCandidate(item,s))continue;let description='';if(s.inDescription){ui.status.textContent=`Страница ${page}/${s.pages}: проверяю ${item.title}`;description=await descriptionFor(item.url);await sleep(250)}const why=passes(item,description,s);if(why){matched++;ui.matched.textContent=matched;render(item,why)}}pagesDone++;ui.pagesDone.textContent=pagesDone;await sleep(500)}ui.status.textContent=stopped?'Сканирование остановлено.':'Сканирование завершено.';ui.count.textContent=`Проверено ${checked}, найдено ${matched}`;}catch(e){ui.status.textContent=e?.message||String(e)}finally{ui.scan.disabled=false;ui.stop.disabled=true}};

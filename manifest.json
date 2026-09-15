@@ -1,21 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Site Parser — OLX",
-  "version": "0.1.0",
-  "description": "Локально собирает фактические объявления с открытой страницы поиска OLX.kz.",
-  "permissions": ["storage", "tabs"],
+  "version": "0.2.0",
+  "description": "Локальный глубокий поиск и точная фильтрация объявлений OLX.kz.",
+  "permissions": ["storage", "tabs", "scripting"],
   "host_permissions": ["https://www.olx.kz/*", "https://olx.kz/*"],
-  "action": {
-    "default_title": "Открыть Site Parser"
-  },
-  "background": {
-    "service_worker": "src/background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": ["https://www.olx.kz/*", "https://olx.kz/*"],
-      "js": ["src/parser/olx.js", "src/content.js"],
-      "run_at": "document_idle"
-    }
-  ]
+  "action": { "default_title": "Открыть Site Parser" },
+  "background": { "service_worker": "src/background.js" },
+  "content_scripts": [{
+    "matches": ["https://www.olx.kz/*", "https://olx.kz/*"],
+    "js": ["src/parser/olx.js", "src/content.js"],
+    "run_at": "document_idle"
+  }]
 }
